@@ -21,6 +21,12 @@ public class Folder {
     private volatile String name;
 
     /**
+     * Lazily computed truncated display name. Cleared on rename. Marked
+     * transient so Gson doesn't try to serialize it.
+     */
+    private transient volatile String cachedTruncatedName;
+
+    /**
      * List of ingredients stored in this folder. Always accessed under
      * {@code this}'s monitor.
      */
@@ -101,6 +107,7 @@ public class Folder {
     public void setName(String name) {
         String oldName = this.name;
         this.name = name;
+        this.cachedTruncatedName = null;
         EnoughFoldersCommon.LOGGER.debug("Renamed folder from '" + oldName + "' to '" + name + "'");
     }
     
@@ -185,12 +192,14 @@ public class Folder {
      * @return The truncated name for this folder
      */
     public String getTruncatedName() {
-        if (name.length() <= 12) {
-            return name;
+        String cached = cachedTruncatedName;
+        if (cached != null) {
+            return cached;
         }
-        String truncated = name.substring(0, 13) + "...";
-        EnoughFoldersCommon.LOGGER.debug("Truncated folder name '{}' to '{}'", name, truncated);
-        return truncated;
+        String current = name;
+        String result = current.length() <= 12 ? current : current.substring(0, 13) + "...";
+        cachedTruncatedName = result;
+        return result;
     }
     
     /**

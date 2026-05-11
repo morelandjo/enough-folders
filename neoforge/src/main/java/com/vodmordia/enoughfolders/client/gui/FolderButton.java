@@ -28,6 +28,14 @@ public class FolderButton extends Button {
      * The folder that this button represents
      */
     private final Folder folder;
+
+    /**
+     * Cached pixel width of the short label, computed lazily on first paint.
+     * Buttons are rebuilt by {@code FolderButtonManager.initFolderButtons}
+     * whenever folder state changes, so the cache lives for one button's
+     * lifetime without needing explicit invalidation.
+     */
+    private int cachedShortNameWidth = -1;
     
     /**
      * Creates a new folder button.
@@ -88,7 +96,11 @@ public class FolderButton extends Button {
         // scale, then draw centered around (0,0) in the scaled coordinate system.
         String shortName = folder.getShortName();
         var font = Minecraft.getInstance().font;
-        int unscaledWidth = font.width(shortName);
+        int unscaledWidth = cachedShortNameWidth;
+        if (unscaledWidth < 0) {
+            unscaledWidth = font.width(shortName);
+            cachedShortNameWidth = unscaledWidth;
+        }
         var pose = guiGraphics.pose();
         pose.pushPose();
         pose.translate(getX() + width / 2f, getY() + height + FolderLayout.LABEL_Y_OFFSET, 0);

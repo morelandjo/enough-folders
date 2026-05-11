@@ -7,6 +7,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 
 import mezz.jei.api.ingredients.IIngredientHelper;
+import mezz.jei.api.ingredients.IIngredientRenderer;
 import mezz.jei.api.ingredients.IIngredientType;
 import mezz.jei.api.ingredients.ITypedIngredient;
 import mezz.jei.api.ingredients.subtypes.UidContext;
@@ -38,6 +39,53 @@ public final class JEIIntegration {
     }
 
     private JEIIntegration() {}
+
+    /**
+     * Resolved render pair for a {@link StoredIngredient}: the live ingredient
+     * object plus the renderer that knows how to draw it. Cache this in the
+     * slot — looking either up requires iterating every registered JEI
+     * ingredient type, which is way too expensive to do per frame.
+     */
+    public record ResolvedRender(Object ingredient, IIngredientRenderer<Object> renderer) {}
+
+    /**
+     * Resolves the live ingredient object and its renderer in a single pass
+     * over registered JEI ingredient types. Callers should cache the result
+     * for the lifetime of the slot — if the JEI runtime is reloaded
+     * mid-session (rare; once per game start), the player needs to reopen the
+     * screen.
+     */
+    public Optional<ResolvedRender> resolveForRender(StoredIngredient stored) {
+        if (jeiRuntime == null) {
+            return Optional.empty();
+        }
+        try {
+            String typeName = stored.getType();
+            String value = stored.getValue();
+            for (IIngredientType<?> type : jeiRuntime.getIngredientManager().getRegisteredIngredientTypes()) {
+                if (!type.getIngredientClass().getName().equals(typeName)) {
+                    continue;
+                }
+                @SuppressWarnings({"deprecation", "unchecked"})
+                Optional<? extends ITypedIngredient<?>> typedIngredient =
+                        jeiRuntime.getIngredientManager().getTypedIngredientByUid((IIngredientType) type, value);
+                if (typedIngredient.isEmpty()) {
+                    return Optional.empty();
+                }
+                Object ingredient = typedIngredient.get().getIngredient();
+                @SuppressWarnings("unchecked")
+                IIngredientRenderer<Object> renderer = (IIngredientRenderer<Object>)
+                        jeiRuntime.getIngredientManager().getIngredientRenderer((IIngredientType<Object>) type);
+                if (ingredient == null || renderer == null) {
+                    return Optional.empty();
+                }
+                return Optional.of(new ResolvedRender(ingredient, renderer));
+            }
+        } catch (Exception e) {
+            EnoughFoldersCommon.LOGGER.error("Failed to resolve ingredient for render", e);
+        }
+        return Optional.empty();
+    }
 
     /**
      * The JEI runtime, obtained from the JEIPlugin
@@ -109,32 +157,17 @@ public final class JEIIntegration {
         return Optional.empty();
     }
     
+    /**
+     * @deprecated re-resolves the ingredient and renderer on every call,
+     * which iterates all registered JEI ingredient types twice. Prefer
+     * {@link #resolveForRender(StoredIngredient)} cached on the call site.
+     */
+    @Deprecated
     public void renderIngredient(GuiGraphics graphics, StoredIngredient ingredient, int x, int y, int width, int height) {
-        if (jeiRuntime == null) {
-            return;
-        }
-
-        try {
-            Optional<?> ingredientOpt = getIngredientFromStored(ingredient);
-            if (ingredientOpt.isEmpty()) {
-                return;
-            }
-
-            Object ingredientObj = ingredientOpt.get();
-            
-            for (IIngredientType<?> type : jeiRuntime.getIngredientManager().getRegisteredIngredientTypes()) {
-                if (type.getIngredientClass().isInstance(ingredientObj)) {
-                    @SuppressWarnings("unchecked")
-                    var renderer = jeiRuntime.getIngredientManager().getIngredientRenderer((IIngredientType<Object>)type);
-                    
-                    if (renderer != null) {
-                        renderer.render(graphics, ingredientObj, x, y);
-                        return;
-                    }
-                }
-            }
-        } catch (Exception e) {
-            EnoughFoldersCommon.LOGGER.error("Failed to render ingredient", e);
+        Optional<ResolvedRender> resolved = resolveForRender(ingredient);
+        if (resolved.isPresent()) {
+            ResolvedRender r = resolved.get();
+            r.renderer().render(graphics, r.ingredient(), x, y);
         }
     }
     

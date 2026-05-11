@@ -106,46 +106,45 @@ public class FolderScreenRenderer {
             int folderRowsCount) {
         
         renderBackground(graphics);
-        
+
         // Render folder buttons
         for (FolderButton button : folderButtons) {
             button.renderWidget(graphics, mouseX, mouseY, partialTick);
         }
-        
-        EnoughFoldersCommon.LOGGER.debug("Rendered {} folder buttons", folderButtons.size());
-        
+
         // Render add folder button
         renderAddFolderButton(graphics, mouseX, mouseY, partialTick, addFolderButton);
-        
-        // Render active folder content if there is one
-        activeFolder.get().ifPresent(folder -> {
-            EnoughFoldersCommon.LOGGER.debug("Rendering active folder: {}", folder.getName());
-            
+
+        // Render active folder content if there is one. Avoid Optional.ifPresent
+        // here — the lambda captures graphics/mouseX/etc. and allocates per frame.
+        Optional<Folder> active = activeFolder.get();
+        if (active.isPresent()) {
+            Folder folder = active.get();
             int verticalOffset = FolderLayout.verticalOffset(isAddingFolder, folderRowsCount);
-            
+
             String name = folder.getTruncatedName();
             graphics.drawString(
-                    parentScreen.getMinecraft().font, 
-                    name, 
-                    leftPos + 5, 
-                    topPos + FOLDER_AREA_HEIGHT + 17 + verticalOffset, 
+                    parentScreen.getMinecraft().font,
+                    name,
+                    leftPos + 5,
+                    topPos + FOLDER_AREA_HEIGHT + 17 + verticalOffset,
                     0xFFFFFF
             );
-            
+
             deleteButton.setPosition(leftPos + width - 25, topPos + FOLDER_AREA_HEIGHT + 12 + verticalOffset);
-            
+
             renderDeleteButton(graphics, mouseX, mouseY, partialTick, deleteButton);
-            
+
             prevPageButton.render(graphics, mouseX, mouseY, partialTick);
             nextPageButton.render(graphics, mouseX, mouseY, partialTick);
-            
+
             // Render page count
             String pageText = (currentPage + 1) + "/" + totalPages;
             int pageTextWidth = parentScreen.getMinecraft().font.width(pageText);
-            
+
             int centerX = leftPos + (width - pageTextWidth) / 2;
             int centerY = prevPageButton.getY() + prevPageButton.getHeight() / 2 - 4;
-            
+
             graphics.drawString(
                     parentScreen.getMinecraft().font,
                     pageText,
@@ -153,14 +152,12 @@ public class FolderScreenRenderer {
                     centerY,
                     0xFFFFFF
             );
-            
+
             // Render ingredient slots
             for (IngredientSlot slot : ingredientSlots) {
                 slot.render(graphics, mouseX, mouseY);
             }
-            
-            EnoughFoldersCommon.LOGGER.debug("Rendered {} ingredient slots", ingredientSlots.size());
-        });
+        }
         
         // Render folder name input if adding a folder
         if (isAddingFolder) {
@@ -177,9 +174,6 @@ public class FolderScreenRenderer {
      * @param graphics The graphics context to render with
      */
     private void renderBackground(GuiGraphics graphics) {
-        EnoughFoldersCommon.LOGGER.debug("FolderScreen.renderBackground at position: {},{} with dimensions: {}x{}", 
-            leftPos, topPos, width, height);
-        
         graphics.fill(leftPos, topPos, leftPos + width, topPos + height, 0x80404040);
     }
     
@@ -192,12 +186,16 @@ public class FolderScreenRenderer {
      * @param folderButtons The folder buttons
      */
     private void renderTooltips(GuiGraphics graphics, int mouseX, int mouseY, List<FolderButton> folderButtons) {
+        // Skip the per-button rect tests when the mouse isn't even over the panel.
+        if (mouseX < leftPos || mouseX >= leftPos + width || mouseY < topPos || mouseY >= topPos + height) {
+            return;
+        }
         for (FolderButton button : folderButtons) {
             if (button.isPointInButton(mouseX, mouseY)) {
                 graphics.renderTooltip(
-                        parentScreen.getMinecraft().font, 
+                        parentScreen.getMinecraft().font,
                         Component.literal(button.getFolder().getName()),
-                        mouseX, 
+                        mouseX,
                         mouseY
                 );
             }

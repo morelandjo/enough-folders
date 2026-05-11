@@ -2,7 +2,10 @@ package com.vodmordia.enoughfolders.client.gui;
 
 import com.vodmordia.enoughfolders.data.StoredIngredient;
 import com.vodmordia.enoughfolders.integrations.jei.core.JEIIntegration;
+import mezz.jei.api.ingredients.IIngredientRenderer;
 import net.minecraft.client.gui.GuiGraphics;
+
+import java.util.Optional;
 
 /**
  * Represents a slot for displaying an ingredient in the active folder's view.
@@ -15,7 +18,18 @@ public class IngredientSlot {
     private final int y;
     private final StoredIngredient ingredient;
     private static final int SIZE = 18;
-    
+
+    /**
+     * Cached resolution of the stored ingredient → live JEI object + renderer.
+     * Resolving requires iterating all registered ingredient types, so we do
+     * it once on first paint. Slot instances are rebuilt every time
+     * {@code IngredientGridManager.refreshIngredientSlots} runs, so this cache
+     * is naturally invalidated on any folder state change.
+     */
+    private boolean resolved;
+    private Object cachedIngredient;
+    private IIngredientRenderer<Object> cachedRenderer;
+
     /**
      * Creates a new ingredient slot.
      *
@@ -28,7 +42,7 @@ public class IngredientSlot {
         this.y = y;
         this.ingredient = ingredient;
     }
-    
+
     /**
      * Renders this ingredient slot and its contents.
      *
@@ -37,15 +51,24 @@ public class IngredientSlot {
      * @param mouseY The mouse y position
      */
     public void render(GuiGraphics graphics, int mouseX, int mouseY) {
-        boolean isHovered = isHovered(mouseX, mouseY);
-        
-        if (isHovered) {
+        if (isHovered(mouseX, mouseY)) {
             graphics.fill(x, y, x + SIZE, y + SIZE, 0x80FFFFFF);
         }
-        
-        JEIIntegration.get().renderIngredient(graphics, ingredient, x + 1, y + 1, SIZE - 2, SIZE - 2);
+
+        if (!resolved) {
+            resolved = true;
+            Optional<JEIIntegration.ResolvedRender> opt = JEIIntegration.get().resolveForRender(ingredient);
+            if (opt.isPresent()) {
+                cachedIngredient = opt.get().ingredient();
+                cachedRenderer = opt.get().renderer();
+            }
+        }
+
+        if (cachedRenderer != null) {
+            cachedRenderer.render(graphics, cachedIngredient, x + 1, y + 1);
+        }
     }
-    
+
     /**
      * Handles mouse clicks on this ingredient slot.
      *
@@ -58,7 +81,7 @@ public class IngredientSlot {
         if (!isHovered(mouseX, mouseY)) {
             return false;
         }
-        
+
         if (button == 0) {
             showRecipes();
             return true;
@@ -66,20 +89,28 @@ public class IngredientSlot {
             showUses();
             return true;
         }
-        
+
         return false;
     }
-    
+
     private void showRecipes() {
         JEIIntegration jei = JEIIntegration.get();
-        jei.getIngredientFromStored(ingredient).ifPresent(jei::showRecipes);
+        if (cachedIngredient != null) {
+            jei.showRecipes(cachedIngredient);
+        } else {
+            jei.getIngredientFromStored(ingredient).ifPresent(jei::showRecipes);
+        }
     }
 
     private void showUses() {
         JEIIntegration jei = JEIIntegration.get();
-        jei.getIngredientFromStored(ingredient).ifPresent(jei::showUses);
+        if (cachedIngredient != null) {
+            jei.showUses(cachedIngredient);
+        } else {
+            jei.getIngredientFromStored(ingredient).ifPresent(jei::showUses);
+        }
     }
-    
+
     /**
      * Checks if the mouse is hovering over this ingredient slot.
      *
@@ -91,7 +122,7 @@ public class IngredientSlot {
         return mouseX >= x && mouseX < x + SIZE &&
                mouseY >= y && mouseY < y + SIZE;
     }
-    
+
     /**
      * Gets the ingredient displayed in this slot.
      *
