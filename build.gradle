@@ -29,14 +29,19 @@ allprojects {
 
     tasks.withType(JavaCompile).configureEach {
         options.encoding = "UTF-8"
-        options.release = 21
+        options.release = 17
     }
 
     java {
-        toolchain.languageVersion = JavaLanguageVersion.of(21)
+        toolchain.languageVersion = JavaLanguageVersion.of(17)
         withSourcesJar()
     }
 }
+
+// Root project is a build coordinator only and has no sources of its own;
+// suppress its empty jar/sources jar so the wrong file can't be shipped.
+tasks.named("jar") { enabled = false }
+tasks.named("sourcesJar") { enabled = false }
 
 subprojects {
     apply plugin: "dev.architectury.loom"
@@ -47,8 +52,8 @@ subprojects {
 
     repositories {
         maven {
-            name = "NeoForged"
-            url = "https://maven.neoforged.net/releases/"
+            name = "Forge"
+            url = "https://maven.minecraftforge.net/"
         }
         maven {
             name = "Jared's maven"

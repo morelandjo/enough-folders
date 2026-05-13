@@ -1,0 +1,102 @@
+plugins {
+    id "com.github.johnrengelman.shadow" version "8.1.1"
+}
+
+architectury {
+    platformSetupLoomIde()
+    fabric()
+}
+
+configurations {
+    common {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+    compileClasspath.extendsFrom common
+    runtimeClasspath.extendsFrom common
+    developmentFabric.extendsFrom common
+
+    // Don't use shadow from the shadow plugin because we don't want IDEA to index it.
+    shadowCommon {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+}
+
+dependencies {
+    modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+    modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
+    modImplementation "dev.architectury:architectury-fabric:${rootProject.architectury_version}"
+
+    common(project(path: ":common", configuration: "namedElements")) { transitive false }
+    shadowCommon(project(path: ":common", configuration: "transformProductionFabric")) { transitive false }
+
+    // JEI — split common-api / fabric-api are compileOnly so common-side
+    // classes can use mezz.jei.api.* without pulling fabric classes onto
+    // their classpath. The full JEI is in modImplementation for runtime.
+    compileOnly("mezz.jei:jei-${rootProject.mc_version}-common-api:${rootProject.jei_version}")
+    compileOnly("mezz.jei:jei-${rootProject.mc_version}-fabric-api:${rootProject.jei_version}")
+    modImplementation("mezz.jei:jei-${rootProject.mc_version}-fabric:${rootProject.jei_version}")
+}
+
+processResources {
+    def replaceProperties = [
+            minecraft_version      : rootProject.minecraft_version,
+            minecraft_version_range: rootProject.minecraft_version_range,
+            fabric_loader_version  : rootProject.fabric_loader_version,
+            fabric_api_version     : rootProject.fabric_api_version,
+            mod_id                 : rootProject.mod_id,
+            mod_name               : rootProject.mod_name,
+            mod_license            : rootProject.mod_license,
+            mod_version            : rootProject.mod_version,
+            mod_authors            : rootProject.mod_authors,
+            mod_description        : rootProject.mod_description
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching("fabric.mod.json") {
+        expand replaceProperties
+    }
+}
+
+shadowJar {
+    exclude "architectury.common.json"
+
+    configurations = [project.configurations.shadowCommon]
+    archiveClassifier = "dev-shadow"
+}
+
+remapJar {
+    input.set shadowJar.archiveFile
+    dependsOn shadowJar
+    archiveClassifier = null
+}
+
+jar {
+    archiveClassifier = "dev"
+}
+
+sourcesJar {
+    def commonSources = project(":common").sourcesJar
+    dependsOn commonSources
+    from commonSources.archiveFile.map { zipTree(it) }
+    // pack.mcmeta is duplicated into both common/ and each platform/ src
+    // resources so dev-mode resource pack loading sees a valid pack info per
+    // module; the sources zip merges them and would otherwise fail.
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+components.java {
+    withVariantsFromConfiguration(project.configurations.shadowRuntimeElements) {
+        skip()
+    }
+}
+
+publishing {
+    publications {
+        mavenFabric(MavenPublication) {
+            artifactId = "$rootProject.mod_id-fabric"
+            from components.java
+        }
+    }
+}

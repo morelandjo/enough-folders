@@ -1,0 +1,109 @@
+plugins {
+    id "com.github.johnrengelman.shadow" version "8.1.1"
+}
+
+architectury {
+    platformSetupLoomIde()
+    forge()
+}
+
+configurations {
+    common {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+    compileClasspath.extendsFrom common
+    runtimeClasspath.extendsFrom common
+    developmentForge.extendsFrom common
+
+    // Don't use shadow from the shadow plugin because we don't want IDEA to index it.
+    shadowCommon {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+}
+
+dependencies {
+    forge "net.minecraftforge:forge:${rootProject.forge_version}"
+    modImplementation "dev.architectury:architectury-forge:${rootProject.architectury_version}"
+
+    common(project(path: ":common", configuration: "namedElements")) { transitive false }
+    shadowCommon(project(path: ":common", configuration: "transformProductionForge")) { transitive false }
+
+    // JEI — split common-api / forge-api are compileOnly so common-side
+    // classes can use mezz.jei.api.* without pulling forge classes onto
+    // their classpath. The full JEI is in modImplementation for runtime.
+    compileOnly("mezz.jei:jei-${rootProject.mc_version}-common-api:${rootProject.jei_version}") {
+        exclude group: "net.minecraftforge"
+    }
+    compileOnly("mezz.jei:jei-${rootProject.mc_version}-forge-api:${rootProject.jei_version}") {
+        exclude group: "net.minecraftforge"
+    }
+    modImplementation("mezz.jei:jei-${rootProject.mc_version}-forge:${rootProject.jei_version}") {
+        exclude group: "net.minecraftforge"
+    }
+}
+
+processResources {
+    def replaceProperties = [
+            minecraft_version         : rootProject.minecraft_version,
+            minecraft_version_range   : rootProject.minecraft_version_range,
+            forge_version             : rootProject.forge_version,
+            forge_version_range       : rootProject.forge_version_range,
+            forge_loader_version_range: rootProject.forge_loader_version_range,
+            mod_id                    : rootProject.mod_id,
+            mod_name                  : rootProject.mod_name,
+            mod_license               : rootProject.mod_license,
+            mod_version               : rootProject.mod_version,
+            mod_authors               : rootProject.mod_authors,
+            mod_description           : rootProject.mod_description
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching("META-INF/mods.toml") {
+        expand replaceProperties
+    }
+}
+
+shadowJar {
+    exclude "fabric.mod.json"
+    exclude "architectury.common.json"
+
+    configurations = [project.configurations.shadowCommon]
+    archiveClassifier = "dev-shadow"
+}
+
+remapJar {
+    input.set shadowJar.archiveFile
+    dependsOn shadowJar
+    archiveClassifier = null
+}
+
+jar {
+    archiveClassifier = "dev"
+}
+
+sourcesJar {
+    def commonSources = project(":common").sourcesJar
+    dependsOn commonSources
+    from commonSources.archiveFile.map { zipTree(it) }
+    // pack.mcmeta is duplicated into both common/ and each platform/ src
+    // resources so dev-mode resource pack loading sees a valid pack info per
+    // module; the sources zip merges them and would otherwise fail.
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+components.java {
+    withVariantsFromConfiguration(project.configurations.shadowRuntimeElements) {
+        skip()
+    }
+}
+
+publishing {
+    publications {
+        mavenForge(MavenPublication) {
+            artifactId = "$rootProject.mod_id-forge"
+            from components.java
+        }
+    }
+}
