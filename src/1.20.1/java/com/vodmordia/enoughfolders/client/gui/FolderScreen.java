@@ -11,6 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -315,10 +316,17 @@ public class FolderScreen implements FolderGhostIngredientTarget {
      */
     private void deleteCurrentFolder() {
         folderManager.getActiveFolder().ifPresent(folder -> {
-            folderManager.deleteFolder(folder);
-            folderManager.clearActiveFolder();
-            buttonManager.initFolderButtons(topPos, isAddingFolder);
-            refreshIngredientSlots();
+            Minecraft.getInstance().setScreen(new ConfirmScreen(confirmed -> {
+                if (confirmed) {
+                    folderManager.deleteFolder(folder);
+                    folderManager.clearActiveFolder();
+                    buttonManager.initFolderButtons(topPos, isAddingFolder);
+                    refreshIngredientSlots();
+                }
+                Minecraft.getInstance().setScreen(parentScreen);
+            },
+                Component.translatable("enoughfolders.folder.delete.confirm.title"),
+                Component.translatable("enoughfolders.folder.delete.confirm.message", folder.getName())));
         });
     }
 

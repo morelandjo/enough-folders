@@ -1,6 +1,8 @@
 {
   "enoughfolders.folder.add": "Add Folder",
   "enoughfolders.folder.delete": "Delete Folder",
+  "enoughfolders.folder.delete.confirm.title": "Delete Folder?",
+  "enoughfolders.folder.delete.confirm.message": "Are you sure you want to delete '%s'? This cannot be undone.",
   "enoughfolders.folder.name": "Folder Name",
   "enoughfolders.gui.page": "Page %s of %s",
   "enoughfolders.tooltip.empty": "Empty folder",
