@@ -24,6 +24,7 @@ stonecutter {
         // Targets. The active/vcs version is the one sources are authored against;
         // every other target is reached via `//? loader {` / `//? >=1.21 {` guards.
         entry("1.21.1", "neoforge")
+        entry("1.21.4", "neoforge")
         entry("1.20.1", "forge")
         entry("1.20.1", "fabric")
         entry("1.19.2", "forge")

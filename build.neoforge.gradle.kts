@@ -12,6 +12,10 @@ base.archivesName = "$modId-${stonecutter.current.project}"
 java.toolchain.languageVersion = JavaLanguageVersion.of((property("java_version") as String).toInt())
 
 sourceSets.main {
+    if (property("deps.minecraft") != "1.21.1") {
+        java.setSrcDirs(listOf(rootProject.file("src/${property("deps.minecraft")}/java")))
+        resources.setSrcDirs(listOf(rootProject.file("src/${property("deps.minecraft")}/resources")))
+    }
     java.exclude("com/vodmordia/enoughfolders/fabric/**", "com/vodmordia/enoughfolders/forge/**")
 }
 

@@ -26,6 +26,7 @@ tasks.register("buildAll") {
     description = "Build every supported Enough Folders target"
     dependsOn(
         ":1.21.1-neoforge:build",
+        ":1.21.4-neoforge:build",
         ":1.20.1-forge:build",
         ":1.20.1-fabric:build",
         ":1.19.2-forge:build",

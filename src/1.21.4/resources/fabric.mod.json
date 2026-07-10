@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${mod_version}",
+  "name": "${mod_name}",
+  "description": "${mod_description}",
+  "authors": ["${mod_authors}"],
+  "license": "${mod_license}",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.vodmordia.enoughfolders.fabric.EnoughFoldersFabric"],
+    "jei_mod_plugin": ["com.vodmordia.enoughfolders.integrations.jei.core.JEIPlugin"]
+  },
+  "mixins": [
+    "enoughfolders.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${fabric_loader_version}",
+    "fabric-api": "*",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=17",
+    "jei": "*"
+  }
+}
