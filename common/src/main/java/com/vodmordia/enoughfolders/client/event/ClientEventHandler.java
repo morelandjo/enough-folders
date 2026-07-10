@@ -5,11 +5,11 @@ import com.vodmordia.enoughfolders.client.gui.FolderScreen;
 import com.vodmordia.enoughfolders.integrations.jei.drag.managers.RecipeGuiManager;
 import com.vodmordia.enoughfolders.integrations.jei.gui.handlers.JEIRecipeGuiHandler;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import mezz.jei.api.runtime.IRecipesGui;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 
@@ -91,7 +91,7 @@ public final class ClientEventHandler {
      * Called after the screen has rendered. Reinitializes the overlay if the
      * window size changed, then draws it.
      */
-    public static void onScreenRender(Screen screen, GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public static void onScreenRender(Screen screen, PoseStack poseStack, int mouseX, int mouseY, float partialTick) {
         if (screen instanceof AbstractContainerScreen<?> containerScreen) {
             FolderScreen folderScreen = FOLDER_SCREENS.get(containerScreen);
             if (folderScreen != null) {
@@ -99,7 +99,7 @@ public final class ClientEventHandler {
                 folderScreen.reinitIfNeeded(
                     minecraft.getWindow().getGuiScaledWidth(),
                     minecraft.getWindow().getGuiScaledHeight());
-                folderScreen.render(graphics, mouseX, mouseY, partialTick);
+                folderScreen.render(poseStack, mouseX, mouseY, partialTick);
             }
             return;
         }
@@ -113,7 +113,7 @@ public final class ClientEventHandler {
                 lastRecipeScreenHeight = screenHeight;
             }
             JEIRecipeGuiHandler.getLastFolderScreen().ifPresent(folderScreen ->
-                folderScreen.render(graphics, mouseX, mouseY, partialTick));
+                folderScreen.render(poseStack, mouseX, mouseY, partialTick));
         }
     }
 

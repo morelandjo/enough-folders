@@ -7,8 +7,8 @@ import com.vodmordia.enoughfolders.integrations.jei.core.JEIIntegration;
 import com.vodmordia.enoughfolders.integrations.jei.gui.targets.FolderButtonTarget;
 import com.vodmordia.enoughfolders.integrations.jei.gui.targets.FolderGhostIngredientTarget;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -114,13 +114,14 @@ public class FolderScreen implements FolderGhostIngredientTarget {
         int screenW = window.getGuiScaledWidth();
         int screenH = window.getGuiScaledHeight();
 
-        int anchorX = folderButton.getX() + folderButton.getWidth() + 2;
+        // 1.19.2: AbstractWidget exposes x/y as public fields, no getX/getY.
+        int anchorX = folderButton.x + folderButton.getWidth() + 2;
         if (anchorX + pickerW > screenW) {
-            anchorX = folderButton.getX() - pickerW - 2;
+            anchorX = folderButton.x - pickerW - 2;
         }
         anchorX = Math.max(0, Math.min(anchorX, screenW - pickerW));
 
-        int anchorY = folderButton.getY();
+        int anchorY = folderButton.y;
         anchorY = Math.max(0, Math.min(anchorY, screenH - pickerH));
 
         colorPicker = new ColorPickerOverlay(anchorX, anchorY, folderButton.getFolder());
@@ -188,11 +189,14 @@ public class FolderScreen implements FolderGhostIngredientTarget {
             height += FolderLayout.INPUT_FIELD_HEIGHT;
         }
 
-        // Create the delete button
-        deleteButton = new Button.Builder(Component.literal("X"), button -> deleteCurrentFolder())
-                .pos(leftPos + width - 25, topPos + FOLDER_AREA_HEIGHT + FolderLayout.PADDING)
-                .size(FolderLayout.BUTTON_SIZE, FolderLayout.BUTTON_SIZE)
-                .build();
+        // Create the delete button (1.19.2 Button has no fluent Builder).
+        deleteButton = new Button(
+                leftPos + width - 25,
+                topPos + FOLDER_AREA_HEIGHT + FolderLayout.PADDING,
+                FolderLayout.BUTTON_SIZE,
+                FolderLayout.BUTTON_SIZE,
+                Component.literal("X"),
+                button -> deleteCurrentFolder());
         
         // Create pagination buttons for ingredient grid
         gridManager.createPaginationButtons(
@@ -220,7 +224,7 @@ public class FolderScreen implements FolderGhostIngredientTarget {
         newFolderNameInput.setValue(currentInputText);
         newFolderNameInput.setVisible(isAddingFolder);
         if (inputHadFocus) {
-            newFolderNameInput.setFocused(true);
+            newFolderNameInput.setFocus(true);
         }
         
         EnoughFoldersCommon.LOGGER.debug("Input box state restored: visible={}, text={}", isAddingFolder, currentInputText);
@@ -264,7 +268,7 @@ public class FolderScreen implements FolderGhostIngredientTarget {
         newFolderNameInput.setVisible(isAddingFolder);
 
         if (isAddingFolder) {
-            newFolderNameInput.setFocused(true);
+            newFolderNameInput.setFocus(true);
         }
 
         EnoughFoldersCommon.LOGGER.debug("Add folder mode toggled to: {}, input box visibility: {}",
@@ -324,16 +328,11 @@ public class FolderScreen implements FolderGhostIngredientTarget {
     
     /**
      * Renders the folder screen.
-     *
-     * @param graphics The graphics context to render with
-     * @param mouseX The mouse x position
-     * @param mouseY The mouse y position
-     * @param partialTick The partial tick time
      */
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void render(PoseStack poseStack, int mouseX, int mouseY, float partialTick) {
 
         renderer.render(
-            graphics,
+            poseStack,
             mouseX,
             mouseY,
             partialTick,
@@ -351,7 +350,7 @@ public class FolderScreen implements FolderGhostIngredientTarget {
         );
 
         if (colorPicker != null) {
-            colorPicker.render(graphics, mouseX, mouseY);
+            colorPicker.render(poseStack, mouseX, mouseY);
         }
     }
     

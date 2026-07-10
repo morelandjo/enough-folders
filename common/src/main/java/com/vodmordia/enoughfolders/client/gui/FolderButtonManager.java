@@ -62,12 +62,14 @@ public class FolderButtonManager {
      * @return The add folder button
      */
     public Button createAddFolderButton(int x, int y, Button.OnPress onAddFolderPressed) {
-        addFolderButton = new Button.Builder(
-                net.minecraft.network.chat.Component.literal("+"), 
-                onAddFolderPressed)
-                .pos(x, y)
-                .size(FOLDER_WIDTH, FOLDER_HEIGHT)
-                .build();
+        // 1.19.2 Button has no fluent Builder — use the direct ctor.
+        addFolderButton = new Button(
+                x,
+                y,
+                FOLDER_WIDTH,
+                FOLDER_HEIGHT,
+                net.minecraft.network.chat.Component.literal("+"),
+                onAddFolderPressed);
         addFolderButton.active = true;
         
         return addFolderButton;
@@ -183,8 +185,9 @@ public class FolderButtonManager {
         for (FolderButton button : folderButtons) {
             Folder folder = button.getFolder();
             
-            int targetX = button.getX() - 1;
-            int targetY = button.getY() - 1;
+            // 1.19.2: AbstractWidget exposes x/y as public fields, no getX/getY.
+            int targetX = button.x - 1;
+            int targetY = button.y - 1;
             int targetWidth = button.getWidth() + 2; 
             int targetHeight = button.getHeight() + 2;
             

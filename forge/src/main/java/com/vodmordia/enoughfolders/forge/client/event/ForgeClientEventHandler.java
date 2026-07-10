@@ -33,9 +33,11 @@ public final class ForgeClientEventHandler {
 
     @SubscribeEvent
     public static void onScreenRender(ScreenEvent.Render.Post event) {
+        // 1.19.2 Forge 43: ScreenEvent.Render.Post carries a PoseStack
+        // (1.20.1 Forge 47 renamed this to getGuiGraphics()).
         ClientEventHandler.onScreenRender(
             event.getScreen(),
-            event.getGuiGraphics(),
+            event.getPoseStack(),
             event.getMouseX(),
             event.getMouseY(),
             event.getPartialTick());

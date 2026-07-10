@@ -1,9 +1,10 @@
 package com.vodmordia.enoughfolders.client.gui;
 import com.vodmordia.enoughfolders.EnoughFoldersCommon;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.vodmordia.enoughfolders.data.Folder;
 import com.vodmordia.enoughfolders.data.FolderManager;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiComponent;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.world.item.DyeColor;
@@ -45,25 +46,25 @@ public class ColorPickerOverlay {
         return mouseX >= x && mouseX < x + WIDTH && mouseY >= y && mouseY < y + HEIGHT;
     }
 
-    public void render(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.fill(x, y, x + WIDTH, y + HEIGHT, BG_COLOR);
-        graphics.fill(x, y, x + WIDTH, y + 1, BORDER_COLOR);
-        graphics.fill(x, y + HEIGHT - 1, x + WIDTH, y + HEIGHT, BORDER_COLOR);
-        graphics.fill(x, y, x + 1, y + HEIGHT, BORDER_COLOR);
-        graphics.fill(x + WIDTH - 1, y, x + WIDTH, y + HEIGHT, BORDER_COLOR);
+    public void render(PoseStack poseStack, int mouseX, int mouseY) {
+        GuiComponent.fill(poseStack, x, y, x + WIDTH, y + HEIGHT, BG_COLOR);
+        GuiComponent.fill(poseStack, x, y, x + WIDTH, y + 1, BORDER_COLOR);
+        GuiComponent.fill(poseStack, x, y + HEIGHT - 1, x + WIDTH, y + HEIGHT, BORDER_COLOR);
+        GuiComponent.fill(poseStack, x, y, x + 1, y + HEIGHT, BORDER_COLOR);
+        GuiComponent.fill(poseStack, x + WIDTH - 1, y, x + WIDTH, y + HEIGHT, BORDER_COLOR);
 
         for (int i = 0; i < PALETTE.length; i++) {
             int sx = swatchX(i);
             int sy = swatchY(i);
             int rgb = packDyeColor(PALETTE[i]) | 0xFF000000;
-            graphics.fill(sx, sy, sx + SWATCH, sy + SWATCH, rgb);
+            GuiComponent.fill(poseStack, sx, sy, sx + SWATCH, sy + SWATCH, rgb);
 
             boolean hovered = mouseX >= sx && mouseX < sx + SWATCH && mouseY >= sy && mouseY < sy + SWATCH;
             int border = hovered ? HOVER_BORDER : BORDER_COLOR;
-            graphics.fill(sx - 1, sy - 1, sx + SWATCH + 1, sy, border);
-            graphics.fill(sx - 1, sy + SWATCH, sx + SWATCH + 1, sy + SWATCH + 1, border);
-            graphics.fill(sx - 1, sy, sx, sy + SWATCH, border);
-            graphics.fill(sx + SWATCH, sy, sx + SWATCH + 1, sy + SWATCH, border);
+            GuiComponent.fill(poseStack, sx - 1, sy - 1, sx + SWATCH + 1, sy, border);
+            GuiComponent.fill(poseStack, sx - 1, sy + SWATCH, sx + SWATCH + 1, sy + SWATCH + 1, border);
+            GuiComponent.fill(poseStack, sx - 1, sy, sx, sy + SWATCH, border);
+            GuiComponent.fill(poseStack, sx + SWATCH, sy, sx + SWATCH + 1, sy + SWATCH, border);
         }
     }
 
@@ -93,7 +94,7 @@ public class ColorPickerOverlay {
     /**
      * Packs {@link DyeColor#getTextureDiffuseColors()} (an RGB float triple)
      * into an 0xRRGGBB int. 1.21+ has {@code DyeColor.getTextureDiffuseColor()}
-     * that returns the packed int directly; 1.20.1 only exposes the float[].
+     * that returns the packed int directly; 1.19.2 and 1.20.1 only expose the float[].
      */
     private static int packDyeColor(DyeColor color) {
         float[] rgb = color.getTextureDiffuseColors();

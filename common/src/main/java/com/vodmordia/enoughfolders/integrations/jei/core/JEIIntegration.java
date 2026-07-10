@@ -16,7 +16,7 @@ import mezz.jei.api.runtime.IRecipesGui;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.IFocus;
 import mezz.jei.api.recipe.IFocusFactory;
-import net.minecraft.client.gui.GuiGraphics;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.Minecraft;
@@ -66,17 +66,20 @@ public final class JEIIntegration {
                 if (!type.getIngredientClass().getName().equals(typeName)) {
                     continue;
                 }
-                @SuppressWarnings({"deprecation", "unchecked"})
-                Optional<? extends ITypedIngredient<?>> typedIngredient =
-                        jeiRuntime.getIngredientManager().getTypedIngredientByUid((IIngredientType) type, value);
-                if (typedIngredient.isEmpty()) {
+                // JEI 11.x (1.19.2): IIngredientManager exposes getIngredientByUid which
+                // returns the bare ingredient, not an ITypedIngredient. JEI 15+ (1.20.1)
+                // renamed this to getTypedIngredientByUid and changed the return type.
+                @SuppressWarnings({"unchecked"})
+                Optional<?> ingredientOpt =
+                        jeiRuntime.getIngredientManager().getIngredientByUid((IIngredientType) type, value);
+                if (ingredientOpt.isEmpty()) {
                     return Optional.empty();
                 }
-                Object ingredient = typedIngredient.get().getIngredient();
+                Object ingredient = ingredientOpt.get();
                 @SuppressWarnings("unchecked")
                 IIngredientRenderer<Object> renderer = (IIngredientRenderer<Object>)
                         jeiRuntime.getIngredientManager().getIngredientRenderer((IIngredientType<Object>) type);
-                if (ingredient == null || renderer == null) {
+                if (renderer == null) {
                     return Optional.empty();
                 }
                 return Optional.of(new ResolvedRender(ingredient, renderer));
@@ -106,26 +109,27 @@ public final class JEIIntegration {
         if (jeiRuntime == null) {
             return Optional.empty();
         }
-        
+
         try {
             String typeName = storedIngredient.getType();
             String value = storedIngredient.getValue();
-            
+
             for (IIngredientType<?> type : jeiRuntime.getIngredientManager().getRegisteredIngredientTypes()) {
                 if (type.getIngredientClass().getName().equals(typeName)) {
-                    @SuppressWarnings({"deprecation", "unchecked"})
-                    Optional<? extends ITypedIngredient<?>> typedIngredient = 
-                            jeiRuntime.getIngredientManager().getTypedIngredientByUid((IIngredientType) type, value);
-                    
-                    if (typedIngredient.isPresent()) {
-                        return Optional.ofNullable(typedIngredient.get().getIngredient());
+                    // JEI 11.x: getIngredientByUid(type, uid) returning Optional<V>.
+                    @SuppressWarnings({"unchecked"})
+                    Optional<?> ingredientOpt =
+                            jeiRuntime.getIngredientManager().getIngredientByUid((IIngredientType) type, value);
+
+                    if (ingredientOpt.isPresent()) {
+                        return ingredientOpt;
                     }
                 }
             }
         } catch (Exception e) {
             EnoughFoldersCommon.LOGGER.error("Failed to get ingredient from stored data", e);
         }
-        
+
         return Optional.empty();
     }
     
@@ -133,19 +137,18 @@ public final class JEIIntegration {
         if (jeiRuntime == null) {
             return Optional.empty();
         }
-        
+
         try {
-            Optional<? extends ITypedIngredient<?>> optTypedIngredient = jeiRuntime.getIngredientManager()
-                    .createTypedIngredient(ingredient);
-            
+            Optional<? extends ITypedIngredient<?>> optTypedIngredient = createTypedIngredientFor(ingredient);
+
             if (optTypedIngredient.isPresent()) {
                 ITypedIngredient<?> typedIngredient = optTypedIngredient.get();
                 IIngredientType<?> ingredientType = typedIngredient.getType();
                 IIngredientHelper<Object> helper = getHelperForType(ingredientType);
-                
+
                 if (helper != null) {
                     String typeClass = ingredientType.getIngredientClass().getName();
-                    // JEI 15.x (1.20.1): `getUniqueId(I, UidContext) -> String`.
+                    // JEI 11.x (1.19.2) and 15.x (1.20.1): `getUniqueId(I, UidContext) -> String`.
                     // Renamed to `getUid` returning Object in JEI 19+ (1.21+).
                     String uid = helper.getUniqueId(ingredient, UidContext.Ingredient);
 
@@ -155,8 +158,30 @@ public final class JEIIntegration {
         } catch (Exception e) {
             EnoughFoldersCommon.LOGGER.error("Failed to store ingredient", e);
         }
-        
+
         return Optional.empty();
+    }
+
+    /**
+     * JEI 11.x (1.19.2) only exposes the two-arg form
+     * {@code createTypedIngredient(IIngredientType<V>, V)}; the convenience
+     * single-arg overload that infers the type was added in JEI 15+ (1.20.1).
+     * Resolve the type from the ingredient instance first, then call the
+     * two-arg form, so we present a uniform API to callers regardless of MC
+     * version.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Optional<? extends ITypedIngredient<?>> createTypedIngredientFor(Object ingredient) {
+        if (jeiRuntime == null) {
+            return Optional.empty();
+        }
+        Optional<? extends IIngredientType<?>> typeOpt =
+                jeiRuntime.getIngredientManager().getIngredientTypeChecked(ingredient);
+        if (typeOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        IIngredientType type = typeOpt.get();
+        return jeiRuntime.getIngredientManager().createTypedIngredient(type, ingredient);
     }
     
     /**
@@ -165,11 +190,11 @@ public final class JEIIntegration {
      * {@link #resolveForRender(StoredIngredient)} cached on the call site.
      */
     @Deprecated
-    public void renderIngredient(GuiGraphics graphics, StoredIngredient ingredient, int x, int y, int width, int height) {
+    public void renderIngredient(PoseStack poseStack, StoredIngredient ingredient, int x, int y, int width, int height) {
         Optional<ResolvedRender> resolved = resolveForRender(ingredient);
         if (resolved.isPresent()) {
             ResolvedRender r = resolved.get();
-            r.renderer().render(graphics, r.ingredient(), x, y);
+            r.renderer().render(poseStack, r.ingredient(), x, y);
         }
     }
     
@@ -189,18 +214,17 @@ public final class JEIIntegration {
             
             IRecipesGui recipesGui = jeiRuntime.getRecipesGui();
             if (recipesGui != null) {
-                Optional<? extends ITypedIngredient<?>> typedIngredient = 
-                    jeiRuntime.getIngredientManager().createTypedIngredient(ingredient);
-                
+                Optional<? extends ITypedIngredient<?>> typedIngredient = createTypedIngredientFor(ingredient);
+
                 if (typedIngredient.isPresent()) {
                     IFocusFactory focusFactory = jeiRuntime.getJeiHelpers().getFocusFactory();
-                    
-                    @SuppressWarnings("unchecked")
+
+                    @SuppressWarnings({"unchecked", "rawtypes"})
                     IFocus<?> focus = focusFactory.createFocus(
                         RecipeIngredientRole.OUTPUT,
                         (ITypedIngredient) typedIngredient.get()
                     );
-                    
+
                     recipesGui.show(focus);
                     EnoughFoldersCommon.LOGGER.debug("Successfully showed recipes for ingredient");
                 } else {
@@ -228,18 +252,17 @@ public final class JEIIntegration {
             
             IRecipesGui recipesGui = jeiRuntime.getRecipesGui();
             if (recipesGui != null) {
-                Optional<? extends ITypedIngredient<?>> typedIngredient = 
-                    jeiRuntime.getIngredientManager().createTypedIngredient(ingredient);
-                
+                Optional<? extends ITypedIngredient<?>> typedIngredient = createTypedIngredientFor(ingredient);
+
                 if (typedIngredient.isPresent()) {
                     IFocusFactory focusFactory = jeiRuntime.getJeiHelpers().getFocusFactory();
-                    
-                    @SuppressWarnings("unchecked")
+
+                    @SuppressWarnings({"unchecked", "rawtypes"})
                     IFocus<?> focus = focusFactory.createFocus(
                         RecipeIngredientRole.INPUT,
                         (ITypedIngredient) typedIngredient.get()
                     );
-                    
+
                     recipesGui.show(focus);
                     EnoughFoldersCommon.LOGGER.debug("Successfully showed uses for ingredient");
                 } else {

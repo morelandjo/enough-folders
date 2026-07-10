@@ -6,7 +6,6 @@ import com.vodmordia.enoughfolders.integrations.jei.gui.targets.FolderButtonTarg
 import com.vodmordia.enoughfolders.integrations.jei.gui.targets.FolderGhostIngredientTarget;
 import com.vodmordia.enoughfolders.integrations.jei.gui.targets.FolderTargetFactory;
 import mezz.jei.api.gui.handlers.IGhostIngredientHandler;
-import mezz.jei.api.ingredients.ITypedIngredient;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.screens.Screen;
@@ -33,10 +32,14 @@ public class FolderGhostHandler<S extends Screen> implements IGhostIngredientHan
     }
 
     @Override
-    public <I> List<Target<I>> getTargetsTyped(S gui, ITypedIngredient<I> ingredient, boolean doStart) {
+    public <I> List<Target<I>> getTargets(S gui, I ingredient, boolean doStart) {
+        // JEI 11.x (1.19.2) leaves the bare-ingredient form as the abstract
+        // method on IGhostIngredientHandler (getTargetsTyped is a default
+        // wrapper). JEI 15+ (1.20.1) flipped these — there we override
+        // getTargetsTyped directly.
         currentScreen = gui;
         if (doStart) {
-            JEIIntegration.get().setCurrentDraggedObject(ingredient.getIngredient());
+            JEIIntegration.get().setCurrentDraggedObject(ingredient);
         }
         return folderScreenLookup.apply(gui)
             .map(fs -> FolderTargetFactory.<I>createAllTargets(fs, this))

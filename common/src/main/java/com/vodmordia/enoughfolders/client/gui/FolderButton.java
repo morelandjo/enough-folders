@@ -5,8 +5,9 @@ import com.vodmordia.enoughfolders.data.Folder;
 import com.vodmordia.enoughfolders.data.StoredIngredient;
 import com.vodmordia.enoughfolders.integrations.jei.core.JEIIntegration;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -21,7 +22,7 @@ public class FolderButton extends Button {
      * Resource location for the folder button textures
      */
     private static final ResourceLocation TEXTURE = new ResourceLocation(EnoughFoldersCommon.MOD_ID, "textures/gui/folders_gray.png");
-    
+
     /**
      * The folder that this button represents
      */
@@ -34,7 +35,7 @@ public class FolderButton extends Button {
      * lifetime without needing explicit invalidation.
      */
     private int cachedShortNameWidth = -1;
-    
+
     /**
      * Creates a new folder button.
      *
@@ -46,39 +47,37 @@ public class FolderButton extends Button {
      * @param onPress The action to perform when the button is pressed
      */
     public FolderButton(int x, int y, int width, int height, Folder folder, OnPress onPress) {
-        super(x, y, width, height, Component.literal(folder.getShortName()), onPress, DEFAULT_NARRATION);
+        // 1.19.2 Button has no CreateNarration parameter; the 6-arg form is the
+        // most expressive. The 1.20.1 build used a 7-arg ctor with DEFAULT_NARRATION.
+        super(x, y, width, height, Component.literal(folder.getShortName()), onPress);
         this.folder = folder;
     }
-    
+
     /**
-     * Renders the folder button.
-     *
-     * @param guiGraphics The graphics context to render with
-     * @param mouseX The mouse x position
-     * @param mouseY The mouse y position
-     * @param partialTick The partial tick time
+     * Renders the folder button. In 1.19.2 the override hook on AbstractWidget
+     * is {@code renderButton(PoseStack, int, int, float)} (renamed to
+     * {@code renderWidget(GuiGraphics, ...)} in 1.20+).
      */
     @Override
-    public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    public void renderButton(PoseStack poseStack, int mouseX, int mouseY, float partialTick) {
         RenderSystem.setShaderTexture(0, TEXTURE);
 
         // Use the highlighted texture variant only when a JEI item is being
         // dragged over this folder — plain mouse-hover keeps the normal sprite.
         // isHovered() (the inherited AbstractWidget field) is only updated by
-        // render(), which we bypass by calling renderWidget directly — so use
+        // render(), which we bypass by calling renderButton directly — so use
         // isPointInButton against the live mouse coords instead.
         boolean dragHover = isPointInButton(mouseX, mouseY)
             && JEIIntegration.get().getDraggedIngredient().isPresent();
         int textureU = dragHover ? 16 : 0;
         int textureV = folder.isActive() ? 48 : 32;
 
-        // Scale the full 16x16 sprite cell down to SPRITE_SIZE (the 11-arg blit
+        // Scale the full 16x16 sprite cell down to SPRITE_SIZE (the 10-arg blit
         // overload takes destination size and source-region size separately;
-        // the 9-arg version we'd been using treats them as one value, which
-        // clips instead of scales).
+        // a shorter overload would treat them as one value and clip).
         int spriteSize = FolderLayout.SPRITE_SIZE;
-        int spriteX = getX() + (width - spriteSize) / 2;
-        int spriteY = getY() + (height - spriteSize) / 2;
+        int spriteX = this.x + (width - spriteSize) / 2;
+        int spriteY = this.y + (height - spriteSize) / 2;
 
         // Tint the grayscale folder sprite with the folder's chosen color.
         int color = folder.getColor();
@@ -86,9 +85,9 @@ public class FolderButton extends Button {
         float g = ((color >> 8) & 0xFF) / 255f;
         float b = (color & 0xFF) / 255f;
         RenderSystem.setShaderColor(r, g, b, 1f);
-        guiGraphics.blit(TEXTURE, spriteX, spriteY, spriteSize, spriteSize, textureU, textureV, 16, 16, 64, 64);
+        GuiComponent.blit(poseStack, spriteX, spriteY, spriteSize, spriteSize, textureU, textureV, 16, 16, 64, 64);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-        
+
         // Folder label, scaled down to fit beneath the smaller icon. Translate to
         // the desired anchor (centered horizontally, just below the button), then
         // scale, then draw centered around (0,0) in the scaled coordinate system.
@@ -99,34 +98,29 @@ public class FolderButton extends Button {
             unscaledWidth = font.width(shortName);
             cachedShortNameWidth = unscaledWidth;
         }
-        var pose = guiGraphics.pose();
-        pose.pushPose();
-        pose.translate(getX() + width / 2f, getY() + height + FolderLayout.LABEL_Y_OFFSET, 0);
-        pose.scale(FolderLayout.LABEL_SCALE, FolderLayout.LABEL_SCALE, 1.0f);
-        guiGraphics.drawString(font, shortName, -unscaledWidth / 2, 0, 0xFFFFFF);
-        pose.popPose();
-        
+        poseStack.pushPose();
+        poseStack.translate(this.x + width / 2f, this.y + height + FolderLayout.LABEL_Y_OFFSET, 0);
+        poseStack.scale(FolderLayout.LABEL_SCALE, FolderLayout.LABEL_SCALE, 1.0f);
+        font.draw(poseStack, shortName, -unscaledWidth / 2f, 0, 0xFFFFFF);
+        poseStack.popPose();
+
         // Highlight if an ingredient is being dragged over
-        highlightForDrag(guiGraphics, mouseX, mouseY);
+        highlightForDrag(poseStack, mouseX, mouseY);
     }
-    
+
     /**
      * Highlights the folder button if an ingredient is being dragged over it.
-     *
-     * @param graphics The graphics context to render with
-     * @param mouseX The mouse x position
-     * @param mouseY The mouse y position
      */
-    private void highlightForDrag(GuiGraphics graphics, int mouseX, int mouseY) {
+    private void highlightForDrag(PoseStack poseStack, int mouseX, int mouseY) {
         if (!isPointInButton(mouseX, mouseY)) {
             return;
         }
         JEIIntegration.get().getDraggedIngredient().ifPresent(ingredient -> {
             int highlightColor = 0x80FFFFFF;
-            graphics.fill(getX() - 1, getY() - 1, getX() + width + 1, getY() + height + 1, highlightColor);
+            GuiComponent.fill(poseStack, this.x - 1, this.y - 1, this.x + width + 1, this.y + height + 1, highlightColor);
         });
     }
-    
+
     /**
      * Gets the folder that this button represents.
      *
@@ -135,7 +129,7 @@ public class FolderButton extends Button {
     public Folder getFolder() {
         return folder;
     }
-    
+
     /**
      * Checks if a point is within the button's bounds.
      *
@@ -144,27 +138,27 @@ public class FolderButton extends Button {
      * @return True if the point is within the button
      */
     public boolean isPointInButton(int mouseX, int mouseY) {
-        return mouseX >= getX() && mouseX < getX() + width && 
-               mouseY >= getY() && mouseY < getY() + height;
+        return mouseX >= this.x && mouseX < this.x + width &&
+               mouseY >= this.y && mouseY < this.y + height;
     }
-    
+
     /**
      * Checks if the button is currently being hovered over by the mouse.
-     * 
-     * @return True if the mouse is hovering over this button
+     * 1.19.2's AbstractWidget exposes hover state as the protected field
+     * {@code isHovered}, not a method (the {@code isHovered()} accessor was
+     * added in a later version).
      */
-    @Override
     public boolean isHovered() {
-        return super.isHovered();
+        return this.isHovered;
     }
-    
+
     /**
      * Triggers the button's click action.
      */
     public void onClick() {
         onPress.onPress(this);
     }
-    
+
     /**
      * Tries to handle a JEI ingredient drop on this folder button.
      *

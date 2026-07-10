@@ -107,7 +107,9 @@ public class FolderInputHandler {
 
         EditBox input = newFolderNameInput.get();
         if (isAddingFolder.getAsBoolean() && input.isMouseOver(mouseX, mouseY)) {
-            input.setFocused(true);
+            // 1.19.2: AbstractWidget#setFocused is protected; EditBox exposes
+            // the public setFocus(boolean) (renamed to setFocused in 1.19.4+).
+            input.setFocus(true);
             return input.mouseClicked(mouseX, mouseY, button);
         }
 

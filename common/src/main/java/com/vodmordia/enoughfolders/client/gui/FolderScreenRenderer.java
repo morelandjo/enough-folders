@@ -1,9 +1,11 @@
 package com.vodmordia.enoughfolders.client.gui;
 import com.vodmordia.enoughfolders.EnoughFoldersCommon;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.vodmordia.enoughfolders.data.Folder;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -20,24 +22,21 @@ import java.util.function.Supplier;
 public class FolderScreenRenderer {
     private static final ResourceLocation TEXTURE = new ResourceLocation(EnoughFoldersCommon.MOD_ID, "textures/gui/folders.png");
     private static final int FOLDER_AREA_HEIGHT = FolderLayout.FOLDER_AREA_HEIGHT;
-    
+
     // The screen that this renderer is rendering for
     private final AbstractContainerScreen<?> parentScreen;
-    
+
     // Screen position and dimensions
     private int leftPos;
     private int topPos;
     private int width;
     private int height;
-    
+
     // Dependencies
     private final Supplier<Optional<Folder>> activeFolder;
-    
+
     /**
      * Creates a new folder screen renderer.
-     *
-     * @param parentScreen The parent container screen
-     * @param activeFolderSupplier Supplier for the active folder
      */
     public FolderScreenRenderer(
             AbstractContainerScreen<?> parentScreen,
@@ -45,54 +44,25 @@ public class FolderScreenRenderer {
         this.parentScreen = parentScreen;
         this.activeFolder = activeFolderSupplier;
     }
-    
-    /**
-     * Sets the position and dimensions for rendering.
-     *
-     * @param leftPos Left position
-     * @param topPos Top position
-     * @param width Width of the container
-     * @param height Height of the container
-     */
+
     public void setPositionAndDimensions(int leftPos, int topPos, int width, int height) {
         this.leftPos = leftPos;
         this.topPos = topPos;
         this.width = width;
         this.height = height;
     }
-    
-    /**
-     * Updates the height dimension.
-     *
-     * @param height New height
-     */
+
     public void updateHeight(int height) {
         this.height = height;
     }
-    
+
     /**
      * Renders the folder screen.
-     *
-     * @param graphics The graphics context to render with
-     * @param mouseX The mouse x position
-     * @param mouseY The mouse y position
-     * @param partialTick The partial tick time
-     * @param folderButtons The folder buttons to render
-     * @param ingredientSlots The ingredient slots to render
-     * @param addFolderButton The add folder button
-     * @param deleteButton The delete button
-     * @param prevPageButton The previous page button
-     * @param nextPageButton The next page button
-     * @param newFolderNameInput The new folder name input field
-     * @param isAddingFolder Whether we're currently adding a folder
-     * @param currentPage Current page number (0-based)
-     * @param totalPages Total number of pages
-     * @param folderRowsCount Number of folder button rows
      */
     public void render(
-            GuiGraphics graphics, 
-            int mouseX, 
-            int mouseY, 
+            PoseStack poseStack,
+            int mouseX,
+            int mouseY,
             float partialTick,
             List<FolderButton> folderButtons,
             List<IngredientSlot> ingredientSlots,
@@ -105,49 +75,53 @@ public class FolderScreenRenderer {
             int currentPage,
             int totalPages,
             int folderRowsCount) {
-        
-        renderBackground(graphics);
+
+        renderBackground(poseStack);
 
         // Render folder buttons
         for (FolderButton button : folderButtons) {
-            button.renderWidget(graphics, mouseX, mouseY, partialTick);
+            button.renderButton(poseStack, mouseX, mouseY, partialTick);
         }
 
         // Render add folder button
-        renderAddFolderButton(graphics, mouseX, mouseY, partialTick, addFolderButton);
+        renderAddFolderButton(poseStack, mouseX, mouseY, partialTick, addFolderButton);
 
         // Render active folder content if there is one. Avoid Optional.ifPresent
-        // here — the lambda captures graphics/mouseX/etc. and allocates per frame.
+        // here — the lambda captures poseStack/mouseX/etc. and allocates per frame.
         Optional<Folder> active = activeFolder.get();
         if (active.isPresent()) {
             Folder folder = active.get();
             int verticalOffset = FolderLayout.verticalOffset(isAddingFolder, folderRowsCount);
 
             String name = folder.getTruncatedName();
-            graphics.drawString(
-                    Minecraft.getInstance().font,
+            var font = Minecraft.getInstance().font;
+            font.draw(
+                    poseStack,
                     name,
-                    leftPos + 5,
-                    topPos + FOLDER_AREA_HEIGHT + 17 + verticalOffset,
+                    leftPos + 5f,
+                    topPos + FOLDER_AREA_HEIGHT + 17f + verticalOffset,
                     0xFFFFFF
             );
 
-            deleteButton.setPosition(leftPos + width - 25, topPos + FOLDER_AREA_HEIGHT + 12 + verticalOffset);
+            // 1.19.2: AbstractWidget has no setPosition/setX/setY — the x/y
+            // fields are public (added later in 1.19.x).
+            deleteButton.x = leftPos + width - 25;
+            deleteButton.y = topPos + FOLDER_AREA_HEIGHT + 12 + verticalOffset;
 
-            renderDeleteButton(graphics, mouseX, mouseY, partialTick, deleteButton);
+            renderDeleteButton(poseStack, mouseX, mouseY, partialTick, deleteButton);
 
-            prevPageButton.render(graphics, mouseX, mouseY, partialTick);
-            nextPageButton.render(graphics, mouseX, mouseY, partialTick);
+            prevPageButton.render(poseStack, mouseX, mouseY, partialTick);
+            nextPageButton.render(poseStack, mouseX, mouseY, partialTick);
 
             // Render page count
             String pageText = (currentPage + 1) + "/" + totalPages;
-            int pageTextWidth = Minecraft.getInstance().font.width(pageText);
+            int pageTextWidth = font.width(pageText);
 
             int centerX = leftPos + (width - pageTextWidth) / 2;
-            int centerY = prevPageButton.getY() + prevPageButton.getHeight() / 2 - 4;
+            int centerY = prevPageButton.y + prevPageButton.getHeight() / 2 - 4;
 
-            graphics.drawString(
-                    Minecraft.getInstance().font,
+            font.draw(
+                    poseStack,
                     pageText,
                     centerX,
                     centerY,
@@ -156,45 +130,39 @@ public class FolderScreenRenderer {
 
             // Render ingredient slots
             for (IngredientSlot slot : ingredientSlots) {
-                slot.render(graphics, mouseX, mouseY);
+                slot.render(poseStack, mouseX, mouseY);
             }
         }
-        
+
         // Render folder name input if adding a folder
         if (isAddingFolder) {
-            newFolderNameInput.render(graphics, mouseX, mouseY, partialTick);
+            newFolderNameInput.render(poseStack, mouseX, mouseY, partialTick);
         }
-        
+
         // Render tooltips
-        renderTooltips(graphics, mouseX, mouseY, folderButtons);
+        renderTooltips(poseStack, mouseX, mouseY, folderButtons);
     }
-    
+
     /**
      * Renders the semi-transparent background of the folder screen.
-     *
-     * @param graphics The graphics context to render with
      */
-    private void renderBackground(GuiGraphics graphics) {
-        graphics.fill(leftPos, topPos, leftPos + width, topPos + height, 0x80404040);
+    private void renderBackground(PoseStack poseStack) {
+        GuiComponent.fill(poseStack, leftPos, topPos, leftPos + width, topPos + height, 0x80404040);
     }
-    
+
     /**
      * Renders tooltips for elements under the mouse cursor.
-     *
-     * @param graphics The graphics context to render with
-     * @param mouseX The mouse x position
-     * @param mouseY The mouse y position
-     * @param folderButtons The folder buttons
      */
-    private void renderTooltips(GuiGraphics graphics, int mouseX, int mouseY, List<FolderButton> folderButtons) {
+    private void renderTooltips(PoseStack poseStack, int mouseX, int mouseY, List<FolderButton> folderButtons) {
         // Skip the per-button rect tests when the mouse isn't even over the panel.
         if (mouseX < leftPos || mouseX >= leftPos + width || mouseY < topPos || mouseY >= topPos + height) {
             return;
         }
         for (FolderButton button : folderButtons) {
             if (button.isPointInButton(mouseX, mouseY)) {
-                graphics.renderTooltip(
-                        Minecraft.getInstance().font,
+                // Screen.renderTooltip(PoseStack, Component, int, int) is public in 1.19.2.
+                parentScreen.renderTooltip(
+                        poseStack,
                         Component.literal(button.getFolder().getName()),
                         mouseX,
                         mouseY
@@ -202,19 +170,13 @@ public class FolderScreenRenderer {
             }
         }
     }
-    
+
     /**
      * Renders the add folder button and textures.
-     *
-     * @param graphics The graphics context to render with
-     * @param mouseX The mouse x position
-     * @param mouseY The mouse y position
-     * @param partialTick The partial tick time
-     * @param addFolderButton The add folder button
      */
-    private void renderAddFolderButton(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, Button addFolderButton) {
-        int x = addFolderButton.getX();
-        int y = addFolderButton.getY();
+    private void renderAddFolderButton(PoseStack poseStack, int mouseX, int mouseY, float partialTick, Button addFolderButton) {
+        int x = addFolderButton.x;
+        int y = addFolderButton.y;
         int frameW = addFolderButton.getWidth();
         int frameH = addFolderButton.getHeight();
         boolean isHovered = mouseX >= x && mouseX < x + frameW && mouseY >= y && mouseY < y + frameH;
@@ -225,21 +187,16 @@ public class FolderScreenRenderer {
 
         int textureU = 0;
         int textureV = isHovered ? 16 : 0;
-        graphics.blit(TEXTURE, spriteX, spriteY, spriteSize, spriteSize, textureU, textureV, 16, 16, 64, 64);
+        RenderSystem.setShaderTexture(0, TEXTURE);
+        GuiComponent.blit(poseStack, spriteX, spriteY, spriteSize, spriteSize, textureU, textureV, 16, 16, 64, 64);
     }
 
     /**
      * Renders the delete folder button and textures.
-     *
-     * @param graphics The graphics context to render with
-     * @param mouseX The mouse x position
-     * @param mouseY The mouse y position
-     * @param partialTick The partial tick time
-     * @param deleteButton The delete button
      */
-    private void renderDeleteButton(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, Button deleteButton) {
-        int x = deleteButton.getX();
-        int y = deleteButton.getY();
+    private void renderDeleteButton(PoseStack poseStack, int mouseX, int mouseY, float partialTick, Button deleteButton) {
+        int x = deleteButton.x;
+        int y = deleteButton.y;
         int frameW = deleteButton.getWidth();
         int frameH = deleteButton.getHeight();
 
@@ -249,6 +206,7 @@ public class FolderScreenRenderer {
 
         int textureU = 16;
         int textureV = 0;
-        graphics.blit(TEXTURE, spriteX, spriteY, spriteSize, spriteSize, textureU, textureV, 16, 16, 64, 64);
+        RenderSystem.setShaderTexture(0, TEXTURE);
+        GuiComponent.blit(poseStack, spriteX, spriteY, spriteSize, spriteSize, textureU, textureV, 16, 16, 64, 64);
     }
 }

@@ -70,19 +70,22 @@ public class IngredientGridManager {
      * @param nextPageCallback Callback when next page button is clicked
      */
     public void createPaginationButtons(Button.OnPress prevPageCallback, Button.OnPress nextPageCallback) {
-        this.prevPageButton = new Button.Builder(
-                net.minecraft.network.chat.Component.literal("<"), 
-                prevPageCallback)
-                .pos(leftPos + FolderLayout.PADDING, topPos + FOLDER_AREA_HEIGHT + FolderLayout.PAGINATION_OFFSET_Y)
-                .size(FolderLayout.BUTTON_SIZE, FolderLayout.BUTTON_SIZE)
-                .build();
+        // 1.19.2 Button has no fluent Builder — use the direct ctor.
+        this.prevPageButton = new Button(
+                leftPos + FolderLayout.PADDING,
+                topPos + FOLDER_AREA_HEIGHT + FolderLayout.PAGINATION_OFFSET_Y,
+                FolderLayout.BUTTON_SIZE,
+                FolderLayout.BUTTON_SIZE,
+                net.minecraft.network.chat.Component.literal("<"),
+                prevPageCallback);
 
-        this.nextPageButton = new Button.Builder(
+        this.nextPageButton = new Button(
+                leftPos + width - 25,
+                topPos + FOLDER_AREA_HEIGHT + FolderLayout.PAGINATION_OFFSET_Y,
+                FolderLayout.BUTTON_SIZE,
+                FolderLayout.BUTTON_SIZE,
                 net.minecraft.network.chat.Component.literal(">"),
-                nextPageCallback)
-                .pos(leftPos + width - 25, topPos + FOLDER_AREA_HEIGHT + FolderLayout.PAGINATION_OFFSET_Y)
-                .size(FolderLayout.BUTTON_SIZE, FolderLayout.BUTTON_SIZE)
-                .build();
+                nextPageCallback);
                 
         updatePagination();
     }
@@ -125,8 +128,12 @@ public class IngredientGridManager {
             int verticalOffset = FolderLayout.verticalOffset(isAddingFolder, folderRowsCount);
 
             int paginationY = topPos + FOLDER_AREA_HEIGHT + FolderLayout.PAGINATION_OFFSET_Y + verticalOffset;
-            prevPageButton.setPosition(leftPos + FolderLayout.PADDING, paginationY);
-            nextPageButton.setPosition(leftPos + width - 25, paginationY);
+            // 1.19.2: AbstractWidget has no setX/setY — assign the public
+            // x/y fields directly.
+            prevPageButton.x = leftPos + FolderLayout.PADDING;
+            prevPageButton.y = paginationY;
+            nextPageButton.x = leftPos + width - 25;
+            nextPageButton.y = paginationY;
 
             int contentStartX = leftPos + FolderLayout.PADDING;
             int contentStartY = topPos + FOLDER_AREA_HEIGHT + FolderLayout.CONTENT_OFFSET_Y + verticalOffset;

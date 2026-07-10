@@ -1,9 +1,10 @@
 package com.vodmordia.enoughfolders.client.gui;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.vodmordia.enoughfolders.data.StoredIngredient;
 import com.vodmordia.enoughfolders.integrations.jei.core.JEIIntegration;
 import mezz.jei.api.ingredients.IIngredientRenderer;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiComponent;
 
 import java.util.Optional;
 
@@ -50,9 +51,9 @@ public class IngredientSlot {
      * @param mouseX The mouse x position
      * @param mouseY The mouse y position
      */
-    public void render(GuiGraphics graphics, int mouseX, int mouseY) {
+    public void render(PoseStack poseStack, int mouseX, int mouseY) {
         if (isHovered(mouseX, mouseY)) {
-            graphics.fill(x, y, x + SIZE, y + SIZE, 0x80FFFFFF);
+            GuiComponent.fill(poseStack, x, y, x + SIZE, y + SIZE, 0x80FFFFFF);
         }
 
         if (!resolved) {
@@ -65,7 +66,9 @@ public class IngredientSlot {
         }
 
         if (cachedRenderer != null) {
-            cachedRenderer.render(graphics, cachedIngredient, x + 1, y + 1);
+            // JEI 11.x (1.19.2): IIngredientRenderer.render(PoseStack, T, int, int).
+            // Renamed to (GuiGraphics, T, int, int) in JEI 15+ (1.20.1).
+            cachedRenderer.render(poseStack, cachedIngredient, x + 1, y + 1);
         }
     }
 
