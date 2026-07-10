@@ -1,32 +1,9 @@
-# eclipse
-bin
-*.launch
-.settings
-.metadata
-.classpath
-.project
-
-# idea
-out
-*.ipr
-*.iws
+.gradle/
+build/
+run/
+versions/*/build/
+versions/*/run/
+versions/*/.gradle/
+.idea/
 *.iml
-.idea
-
-# gradle
-build
-.gradle
-
-# other
-eclipse
-run
-runs
-run-data
-launch.json
-docs
-.vscode
-
-repo
-# macOS
 .DS_Store
-**/.DS_Store

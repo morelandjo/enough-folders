@@ -1,0 +1,97 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "1.20.1-forge - Client",
+      "presentation": {
+        "group": "Mod Development - 1.20.1-forge",
+        "order": 0
+      },
+      "projectName": "1.20.1-forge",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@/Users/josh/Documents/minecraftmodding/mdks/stonecutter/versions/1.20.1-forge/build/moddev/clientRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@/Users/josh/Documents/minecraftmodding/mdks/stonecutter/versions/1.20.1-forge/build/moddev/clientRunVmArgs.txt",
+        "-Dfml.modFolders\u003dexample_mod%%/Users/josh/Documents/minecraftmodding/mdks/stonecutter/versions/1.20.1-forge/bin/main"
+      ],
+      "cwd": "${workspaceFolder}/versions/1.20.1-forge/run",
+      "env": {
+        "MOD_CLASSES": "example_mod%%/Users/josh/Documents/minecraftmodding/mdks/stonecutter/versions/1.20.1-forge/bin/main"
+      },
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "1.20.1-forge - Server",
+      "presentation": {
+        "group": "Mod Development - 1.20.1-forge",
+        "order": 1
+      },
+      "projectName": "1.20.1-forge",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@/Users/josh/Documents/minecraftmodding/mdks/stonecutter/versions/1.20.1-forge/build/moddev/serverRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@/Users/josh/Documents/minecraftmodding/mdks/stonecutter/versions/1.20.1-forge/build/moddev/serverRunVmArgs.txt",
+        "-Dfml.modFolders\u003dexample_mod%%/Users/josh/Documents/minecraftmodding/mdks/stonecutter/versions/1.20.1-forge/bin/main"
+      ],
+      "cwd": "${workspaceFolder}/versions/1.20.1-forge/run",
+      "env": {
+        "MOD_CLASSES": "example_mod%%/Users/josh/Documents/minecraftmodding/mdks/stonecutter/versions/1.20.1-forge/bin/main"
+      },
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "1.21.1-neoforge - Client",
+      "presentation": {
+        "group": "Mod Development - 1.21.1-neoforge",
+        "order": 0
+      },
+      "projectName": "1.21.1-neoforge",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@/Users/josh/Documents/minecraftmodding/mdks/stonecutter/versions/1.21.1-neoforge/build/moddev/clientRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@/Users/josh/Documents/minecraftmodding/mdks/stonecutter/versions/1.21.1-neoforge/build/moddev/clientRunVmArgs.txt",
+        "-Dfml.modFolders\u003dexample_mod%%/Users/josh/Documents/minecraftmodding/mdks/stonecutter/versions/1.21.1-neoforge/bin/main"
+      ],
+      "cwd": "${workspaceFolder}/versions/1.21.1-neoforge/run",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "1.21.1-neoforge - Server",
+      "presentation": {
+        "group": "Mod Development - 1.21.1-neoforge",
+        "order": 1
+      },
+      "projectName": "1.21.1-neoforge",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@/Users/josh/Documents/minecraftmodding/mdks/stonecutter/versions/1.21.1-neoforge/build/moddev/serverRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@/Users/josh/Documents/minecraftmodding/mdks/stonecutter/versions/1.21.1-neoforge/build/moddev/serverRunVmArgs.txt",
+        "-Dfml.modFolders\u003dexample_mod%%/Users/josh/Documents/minecraftmodding/mdks/stonecutter/versions/1.21.1-neoforge/bin/main"
+      ],
+      "cwd": "${workspaceFolder}/versions/1.21.1-neoforge/run",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    }
+  ]
+}

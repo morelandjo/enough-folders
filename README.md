@@ -1,18 +1,26 @@
 # Enough Folders
 
-Organize JEI ingredients into customizable folders.
+Enough Folders organizes JEI ingredients into user-defined folders. This branch uses Stonecutter
+to build all supported Minecraft and loader combinations from one Gradle workspace.
 
-## Features
+| Target | Java | Source set |
+|---|---:|---|
+| `1.21.1-neoforge` | 21 | `src/main` |
+| `1.20.1-forge` | 17 | `src/1.20.1` |
+| `1.20.1-fabric` | 17 | `src/1.20.1` |
+| `1.19.2-forge` | 17 | `src/1.19.2` |
+| `1.19.2-fabric` | 17 | `src/1.19.2` |
 
-- Create and manage folders for ingredients
-- Drag and drop ingredients directly from JEI into your folders
-- World-specific folder saving (separate folder sets for each world)
-- Folders show on inventory screens
+The 1.20.1 and 1.19.2 source sets are shared between Forge and Fabric; loader-only packages are
+selected by the corresponding build script. The newer 1.21.1 implementation remains NeoForge-only.
 
-## Usage
+## Commands
 
-1. Open any inventory screen
-2. The folder interface will appear on the side
-3. Click the "+" button to create a new folder
-4. Drag items from JEI into your folders or use Shift+A to add to your active folder
-5. Click on folders to view their contents
+```sh
+./gradlew buildAll
+./gradlew :1.21.1-neoforge:runClient
+./gradlew :1.20.1-forge:build
+./gradlew "Set active project to 1.21.1-neoforge"
+```
+
+Built jars are written beneath `versions/<target>/build/libs/`.
